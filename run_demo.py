@@ -35,8 +35,7 @@ def parse_arguments():
     parser.add_argument(
         "--debug", type=bool, default=True, help="debug mode"
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 def main():
     args = parse_arguments()
@@ -46,10 +45,8 @@ def main():
     task = args.task
     pred_file = args.pred_file
     save_file = args.demo_save_dir
-    max_ra_len = args.max_ra_len
-    if task == "last_letters":
-        max_ra_len = 7
-    if task == "aqua" or task == "last_letters":
+    max_ra_len = 7 if task == "last_letters" else args.max_ra_len
+    if task in ["aqua", "last_letters"]:
         num_clusters = 4
     elif task == "commonsensqa":
         num_clusters = 7
@@ -99,11 +96,11 @@ def main():
     clustering_model.fit(corpus_embeddings)
     cluster_assignment = clustering_model.labels_
 
-    clustered_sentences = [[] for i in range(num_clusters)]
+    clustered_sentences = [[] for _ in range(num_clusters)]
 
     dist = clustering_model.transform(corpus_embeddings)
-    clustered_dists = [[] for i in range(num_clusters)]
-    clustered_idx = [[] for i in range(num_clusters)]
+    clustered_dists = [[] for _ in range(num_clusters)]
+    clustered_idx = [[] for _ in range(num_clusters)]
     for sentence_id, cluster_id in enumerate(cluster_assignment):
         clustered_sentences[cluster_id].append(corpus[sentence_id])
         clustered_dists[cluster_id].append(dist[sentence_id][cluster_id])
@@ -115,7 +112,7 @@ def main():
         print("Cluster ", i+1)
         tmp = list(map(list, zip(range(len(clustered_dists[i])), clustered_dists[i])))
         top_min_dist = sorted(tmp, key=lambda x: x[1], reverse=False)
-        if not args.sampling == "center":
+        if args.sampling != "center":
             random.shuffle(top_min_dist)
         for element in top_min_dist:
             min_idx = element[0]
@@ -124,16 +121,16 @@ def main():
 
             if len(question[clustered_idx[i][min_idx]].strip().split()) <= 60 \
                 and len(c_rationale.replace("\n\n", "\n").split("\n")) <= max_ra_len and c_rationale[-1] == "." and c_pred_ans != "":
-                if args.task in ["gsm8k", "multiarith", "singleeq", "addsub", "svamp"]:
-                    if not (c_pred_ans.strip() in c_rationale.split(".")[-2] or c_pred_ans.strip() in c_rationale.split()[-10:]):
+                if (
+                    c_pred_ans.strip() not in c_rationale.split(".")[-2]
+                    and c_pred_ans.strip() not in c_rationale.split()[-10:]
+                ):
+                    if args.task in ["gsm8k", "multiarith", "singleeq", "addsub", "svamp"]:
                         continue
                 c_question = question[clustered_idx[i][min_idx]]
                 c_rationale = c_rationale.replace("\n\n", "\n").replace("\n", " ").strip()
                 c_rationale = " ".join(c_rationale.split())
-                if args.debug:
-                    c_gold_ans = gold_ans[clustered_idx[i][min_idx]]
-                else:
-                    c_gold_ans = None
+                c_gold_ans = gold_ans[clustered_idx[i][min_idx]] if args.debug else None
                 demo_element = {
                     "question": c_question,
                     "rationale": c_rationale,
@@ -165,7 +162,7 @@ def main():
            c=np.arange(0,num_clusters),cmap=plt.cm.Paired,)
     plt.xticks([])
     plt.yticks([])
-    plt.savefig(save_file+".png", dpi=600)
+    plt.savefig(f"{save_file}.png", dpi=600)
 
 if __name__ == "__main__":
     main()

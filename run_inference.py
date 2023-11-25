@@ -10,26 +10,23 @@ def main():
     print('*****************************')
     print(args)
     print('*****************************')
-    
+
     fix_seed(args.random_seed)
-    
+
     print("OPENAI_API_KEY:")
-    print(os.getenv("OPENAI_API_KEY")[0:5] + '**********')
-    
+    print(os.getenv("OPENAI_API_KEY")[:5] + '**********')
+
     # Initialize decoder class (load model and tokenizer) ...
     decoder = Decoder()
-    
+
     print("setup data loader ...")
     dataloader = setup_data_loader(args)
     print_now()
 
     if args.method == "few_shot":
         demo = create_demo_text(args, cot_flag=False)
-    elif args.method == "few_shot_cot" or args.method == "auto_cot":
+    elif args.method in ["few_shot_cot", "auto_cot"]:
         demo = create_demo_text(args, cot_flag=True)
-    else:
-        pass
-
     total = 0
     correct_list = []
     with open(args.output_dir, "a") as wp:
@@ -38,25 +35,19 @@ def main():
             if i < args.resume_id - 1:
             # if i < 297:
                 continue
-            output_line = {}
-            
             print('*************************')
-            print("{}st data".format(i+1))
-                    
+            print(f"{i + 1}st data")
+
             # Prepare question template ...
             x, y = data
-            x = "Q: " + x[0] + "\n" + "A:"
+            x = f"Q: {x[0]}" + "\n" + "A:"
             y = y[0].strip()
-            
-            # print(x, y)
-            
-            output_line["question"] = x
-            output_line["gold_ans"] = y
 
+            output_line = {"question": x, "gold_ans": y}
             if args.method == "zero_shot":
-                x = x + " " + args.direct_answer_trigger_for_zeroshot
+                x = f"{x} {args.direct_answer_trigger_for_zeroshot}"
             elif args.method == "zero_shot_cot":
-                x = x + " " + args.cot_trigger
+                x = f"{x} {args.cot_trigger}"
             elif args.method == "few_shot":
                 x = demo + x
             elif args.method == "few_shot_cot":
@@ -65,7 +56,7 @@ def main():
                 x = demo + x + " " + args.cot_trigger
             else:
                 raise ValueError("method is not properly defined ...")
-            
+
             # Answer experiment by generating text ...
             max_length = args.max_length_cot if "cot" in args.method else args.max_length_direct
             z = decoder.decode(args, x, max_length)
@@ -84,8 +75,8 @@ def main():
 
             # Clensing of predicted answer ...
             pred = answer_cleansing(args, pred)
-            
-            
+
+
             output_line["pred_ans"] = pred
             output_line["wrap_que"] = x
 
@@ -93,22 +84,22 @@ def main():
             wp.write(output_json + '\n')
 
             # Choose the most frequent answer from the list ...
-            print("pred : {}".format(pred))
-            print("GT : " + y)
+            print(f"pred : {pred}")
+            print(f"GT : {y}")
             print('*************************')
-            
+
             # Checking answer ...
             correct = (np.array([pred]) == np.array([y])).sum().item()
             correct_list.append(correct)
             total += 1 #np.array([y]).size(0)
-            
+
             if (args.limit_dataset_size != 0) and ((i+1) >= args.limit_dataset_size):
                 break
                 #raise ValueError("Stop !!")
 
     # Calculate accuracy ...
     accuracy = (sum(correct_list) * 1.0 / total) * 100
-    print("accuracy : {}".format(accuracy))
+    print(f"accuracy : {accuracy}")
     
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Zero-shot-CoT")
