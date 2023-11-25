@@ -15,16 +15,16 @@ def cot(method, question):
     else:
         demo = None
 
-    x = "Q: " + question + "\n" + "A:"
+    x = f"Q: {question}" + "\n" + "A:"
     print('*****************************')
     print("Test Question:")
     print(question)
     print('*****************************')
 
     if args.method == "zero_shot":
-        x = x + " " + args.direct_answer_trigger_for_zeroshot
+        x = f"{x} {args.direct_answer_trigger_for_zeroshot}"
     elif args.method == "zero_shot_cot":
-        x = x + " " + args.cot_trigger
+        x = f"{x} {args.cot_trigger}"
     elif args.method == "manual_cot":
         x = demo + x
     elif args.method == "auto_cot":
@@ -44,13 +44,13 @@ def cot(method, question):
         max_length = args.max_length_direct
         pred = decoder.decode(args, z2, max_length)
         print("Output:")
-        print(z + " " + args.direct_answer_trigger_for_zeroshot_cot + " " + pred)
-        print('*****************************')
+        print(f"{z} {args.direct_answer_trigger_for_zeroshot_cot} {pred}")
     else:
         pred = z
         print("Output:")
         print(pred)
-        print('*****************************')
+
+    print('*****************************')
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Zero-shot-CoT")
